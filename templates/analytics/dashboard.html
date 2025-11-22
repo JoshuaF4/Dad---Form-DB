@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Form Analytics Dashboard</title>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#4a90d9">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: linear-gradient(135deg, #4a90d9 0%, #357abd 100%);
+            color: white;
+            padding: 20px 0;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: white;
+            color: #4a90d9;
+        }
+
+        .btn-primary:hover {
+            background: #f0f0f0;
+        }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.2);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 20px;
+        }
+
+        @media (max-width: 1200px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        /* Query Section */
+        .query-section {
+            grid-column: 1 / -1;
+        }
+
+        .query-input-wrapper {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .query-input {
+            flex: 1;
+            padding: 15px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.2s;
+        }
+
+        .query-input:focus {
+            outline: none;
+            border-color: #4a90d9;
+        }
+
+        .query-btn {
+            padding: 15px 30px;
+            background: #4a90d9;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .query-btn:hover {
+            background: #357abd;
+        }
+
+        .query-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .suggestions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .suggestion-chip {
+            padding: 6px 12px;
+            background: #f0f4f8;
+            border: 1px solid #e0e0e0;
+            border-radius: 20px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .suggestion-chip:hover {
+            background: #e3e9f0;
+            border-color: #4a90d9;
+        }
+
+        /* Results Section */
+        .results-section {
+            min-height: 400px;
+        }
+
+        .sql-display {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Fira Code', monospace;
+            font-size: 13px;
+            margin-bottom: 15px;
+            overflow-x: auto;
+        }
+
+        .results-table-wrapper {
+            overflow-x: auto;
+        }
+
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .results-table th,
+        .results-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        .results-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            font-size: 13px;
+            text-transform: uppercase;
+            color: #666;
+        }
+
+        .results-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        /* Chart Section */
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-bottom: 15px;
+        }
+
+        .chart-controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .chart-type-btn {
+            padding: 8px 16px;
+            border: 1px solid #e0e0e0;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        .chart-type-btn:hover,
+        .chart-type-btn.active {
+            background: #4a90d9;
+            color: white;
+            border-color: #4a90d9;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Forms List */
+        .forms-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .form-item {
+            padding: 12px;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .form-item:hover {
+            border-color: #4a90d9;
+            background: #f8f9fa;
+        }
+
+        .form-item-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .form-item-meta {
+            font-size: 12px;
+            color: #666;
+        }
+
+        /* History List */
+        .history-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .history-item:hover {
+            background: #f8f9fa;
+        }
+
+        .history-query {
+            font-size: 13px;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .history-meta {
+            font-size: 11px;
+            color: #888;
+        }
+
+        /* Sync Status */
+        .sync-status {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .sync-stat {
+            text-align: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .sync-stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #4a90d9;
+        }
+
+        .sync-stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+        }
+
+        /* Loading & Empty States */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #888;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #4a90d9;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #888;
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+
+        /* Error State */
+        .error-message {
+            background: #fff5f5;
+            color: #c53030;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #feb2b2;
+        }
+
+        /* Insights */
+        .insights-list {
+            list-style: none;
+        }
+
+        .insights-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+            font-size: 14px;
+        }
+
+        .insights-list li:last-child {
+            border-bottom: none;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #eee;
+            margin-bottom: 15px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            font-weight: 500;
+            color: #666;
+            transition: all 0.2s;
+        }
+
+        .tab:hover {
+            color: #4a90d9;
+        }
+
+        .tab.active {
+            color: #4a90d9;
+            border-bottom-color: #4a90d9;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .query-input-wrapper {
+                flex-direction: column;
+            }
+
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+
+            header .container {
+                flex-direction: column;
+                gap: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Form Analytics Dashboard</h1>
+            <div class="header-actions">
+                <button class="btn btn-secondary" onclick="syncDatabase()">Sync Database</button>
+                <button class="btn btn-primary" onclick="window.location.href='/app'">Open App</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Query Section -->
+        <div class="card query-section">
+            <div class="card-header">
+                <span class="card-title">Natural Language Query</span>
+            </div>
+            <div class="query-input-wrapper">
+                <input type="text" id="queryInput" class="query-input"
+                       placeholder="Ask a question about your form data... (e.g., 'How many responses this week?')"
+                       onkeypress="if(event.key === 'Enter') executeQuery()">
+                <button class="query-btn" onclick="executeQuery()" id="queryBtn">
+                    Run Query
+                </button>
+            </div>
+            <div class="suggestions" id="suggestions">
+                <!-- Suggestions will be loaded here -->
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <!-- Main Content -->
+            <div class="main-content">
+                <!-- Results Card -->
+                <div class="card results-section">
+                    <div class="card-header">
+                        <span class="card-title">Results</span>
+                        <span id="resultCount"></span>
+                    </div>
+
+                    <div class="tabs">
+                        <div class="tab active" data-tab="table">Table</div>
+                        <div class="tab" data-tab="chart">Chart</div>
+                        <div class="tab" data-tab="sql">SQL</div>
+                        <div class="tab" data-tab="insights">Insights</div>
+                    </div>
+
+                    <div class="tab-content active" id="tab-table">
+                        <div class="results-table-wrapper">
+                            <div id="resultsTable" class="empty-state">
+                                <div class="empty-state-icon">📊</div>
+                                <p>Enter a query to see results</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tab-content" id="tab-chart">
+                        <div class="chart-container">
+                            <canvas id="resultsChart"></canvas>
+                        </div>
+                        <div class="chart-controls">
+                            <button class="chart-type-btn active" data-type="bar">Bar</button>
+                            <button class="chart-type-btn" data-type="line">Line</button>
+                            <button class="chart-type-btn" data-type="pie">Pie</button>
+                            <button class="chart-type-btn" data-type="doughnut">Doughnut</button>
+                        </div>
+                    </div>
+
+                    <div class="tab-content" id="tab-sql">
+                        <pre class="sql-display" id="sqlDisplay">-- Generated SQL will appear here</pre>
+                    </div>
+
+                    <div class="tab-content" id="tab-insights">
+                        <ul class="insights-list" id="insightsList">
+                            <li>Run a query to see insights</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="sidebar">
+                <!-- Forms List -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Forms</span>
+                        <button class="btn btn-secondary" style="padding: 5px 10px; font-size: 12px;" onclick="loadForms()">Refresh</button>
+                    </div>
+                    <div class="forms-list" id="formsList">
+                        <div class="loading">
+                            <div class="loading-spinner"></div>
+                            Loading forms...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sync Status -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Sync Status</span>
+                    </div>
+                    <div class="sync-status" id="syncStatus">
+                        <!-- Sync stats will be loaded here -->
+                    </div>
+                </div>
+
+                <!-- Query History -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Recent Queries</span>
+                    </div>
+                    <div class="history-list" id="historyList">
+                        <div class="loading">
+                            <div class="loading-spinner"></div>
+                            Loading history...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // State
+        let currentChart = null;
+        let currentResults = null;
+        let selectedChartType = 'bar';
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSuggestions();
+            loadForms();
+            loadHistory();
+            loadSyncStatus();
+            initTabs();
+            initChartControls();
+        });
+
+        // Tab functionality
+        function initTabs() {
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    tab.classList.add('active');
+                    document.getElementById(`tab-${tab.dataset.tab}`).classList.add('active');
+                });
+            });
+        }
+
+        // Chart controls
+        function initChartControls() {
+            document.querySelectorAll('.chart-type-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.chart-type-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    selectedChartType = btn.dataset.type;
+                    if (currentResults) {
+                        renderChart(currentResults);
+                    }
+                });
+            });
+        }
+
+        // Execute query
+        async function executeQuery() {
+            const input = document.getElementById('queryInput');
+            const query = input.value.trim();
+
+            if (!query) return;
+
+            const btn = document.getElementById('queryBtn');
+            btn.disabled = true;
+            btn.textContent = 'Running...';
+
+            try {
+                const response = await fetch('/api/query', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    currentResults = data;
+                    displayResults(data);
+                    loadHistory(); // Refresh history
+                } else {
+                    showError(data.error || 'Query failed');
+                }
+            } catch (error) {
+                showError('Failed to execute query: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Run Query';
+            }
+        }
+
+        // Display results
+        function displayResults(data) {
+            const results = data.results;
+
+            // Update result count
+            document.getElementById('resultCount').textContent =
+                `${results.row_count} result(s) in ${data.execution_time_ms}ms`;
+
+            // Display SQL
+            document.getElementById('sqlDisplay').textContent = data.sql_query;
+
+            // Display table
+            if (results.rows.length > 0) {
+                let html = '<table class="results-table"><thead><tr>';
+                results.columns.forEach(col => {
+                    html += `<th>${col}</th>`;
+                });
+                html += '</tr></thead><tbody>';
+
+                results.rows.forEach(row => {
+                    html += '<tr>';
+                    results.columns.forEach(col => {
+                        html += `<td>${row[col] ?? ''}</td>`;
+                    });
+                    html += '</tr>';
+                });
+                html += '</tbody></table>';
+
+                document.getElementById('resultsTable').innerHTML = html;
+            } else {
+                document.getElementById('resultsTable').innerHTML =
+                    '<div class="empty-state"><p>No results found</p></div>';
+            }
+
+            // Display insights
+            const insights = data.explanation ?
+                [`Intent: ${data.explanation.intent}`, `Table: ${data.explanation.target_table}`] :
+                ['Query executed successfully'];
+
+            document.getElementById('insightsList').innerHTML =
+                insights.map(i => `<li>${i}</li>`).join('');
+
+            // Render chart
+            renderChart(data);
+        }
+
+        // Render chart
+        async function renderChart(data) {
+            const ctx = document.getElementById('resultsChart').getContext('2d');
+
+            if (currentChart) {
+                currentChart.destroy();
+            }
+
+            try {
+                const response = await fetch('/api/chart', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        data: data.results,
+                        chart_type: selectedChartType,
+                        title: ''
+                    })
+                });
+
+                const chartConfig = await response.json();
+                currentChart = new Chart(ctx, chartConfig);
+            } catch (error) {
+                console.error('Chart error:', error);
+            }
+        }
+
+        // Load suggestions
+        async function loadSuggestions() {
+            try {
+                const response = await fetch('/api/query/suggestions');
+                const data = await response.json();
+
+                const container = document.getElementById('suggestions');
+                container.innerHTML = data.suggestions.map(s =>
+                    `<span class="suggestion-chip" onclick="useSuggestion('${s.replace(/'/g, "\\'")}')">${s}</span>`
+                ).join('');
+            } catch (error) {
+                console.error('Failed to load suggestions:', error);
+            }
+        }
+
+        function useSuggestion(text) {
+            document.getElementById('queryInput').value = text;
+            executeQuery();
+        }
+
+        // Load forms
+        async function loadForms() {
+            const container = document.getElementById('formsList');
+
+            try {
+                const response = await fetch('/api/forms');
+                const data = await response.json();
+
+                if (data.forms && data.forms.length > 0) {
+                    container.innerHTML = data.forms.map(form => `
+                        <div class="form-item" onclick="selectForm('${form.session_id}')">
+                            <div class="form-item-title">${form.title}</div>
+                            <div class="form-item-meta">
+                                ${form.response_count} responses • ${form.field_count} fields
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<div class="empty-state"><p>No forms yet</p></div>';
+                }
+            } catch (error) {
+                container.innerHTML = '<div class="error-message">Failed to load forms</div>';
+            }
+        }
+
+        function selectForm(sessionId) {
+            document.getElementById('queryInput').value =
+                `Show all responses for form "${sessionId}"`;
+            executeQuery();
+        }
+
+        // Load history
+        async function loadHistory() {
+            const container = document.getElementById('historyList');
+
+            try {
+                const response = await fetch('/api/query/history?limit=20');
+                const data = await response.json();
+
+                if (data.history && data.history.length > 0) {
+                    container.innerHTML = data.history.map(item => `
+                        <div class="history-item" onclick="useHistoryQuery('${item.natural_query.replace(/'/g, "\\'")}')">
+                            <div class="history-query">${item.natural_query}</div>
+                            <div class="history-meta">
+                                ${item.result_count} results • ${item.execution_time_ms}ms
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<div class="empty-state"><p>No query history</p></div>';
+                }
+            } catch (error) {
+                container.innerHTML = '<div class="error-message">Failed to load history</div>';
+            }
+        }
+
+        function useHistoryQuery(query) {
+            document.getElementById('queryInput').value = query;
+            executeQuery();
+        }
+
+        // Load sync status
+        async function loadSyncStatus() {
+            const container = document.getElementById('syncStatus');
+
+            try {
+                const response = await fetch('/api/sync/status');
+                const data = await response.json();
+
+                container.innerHTML = `
+                    <div class="sync-stat">
+                        <div class="sync-stat-value">${data.dynamic_forms}</div>
+                        <div class="sync-stat-label">Dynamic</div>
+                    </div>
+                    <div class="sync-stat">
+                        <div class="sync-stat-value">${data.static_forms}</div>
+                        <div class="sync-stat-label">Static</div>
+                    </div>
+                    <div class="sync-stat">
+                        <div class="sync-stat-value">${data.pending}</div>
+                        <div class="sync-stat-label">Pending</div>
+                    </div>
+                    <div class="sync-stat">
+                        <div class="sync-stat-value">${data.synced}</div>
+                        <div class="sync-stat-label">Synced</div>
+                    </div>
+                `;
+            } catch (error) {
+                container.innerHTML = '<div class="error-message">Failed to load status</div>';
+            }
+        }
+
+        // Sync database
+        async function syncDatabase() {
+            try {
+                const response = await fetch('/api/sync/run', { method: 'POST' });
+                const data = await response.json();
+
+                alert(`Sync complete: ${data.synced} synced, ${data.skipped} skipped, ${data.errors} errors`);
+                loadSyncStatus();
+                loadForms();
+            } catch (error) {
+                alert('Sync failed: ' + error.message);
+            }
+        }
+
+        // Show error
+        function showError(message) {
+            document.getElementById('resultsTable').innerHTML =
+                `<div class="error-message">${message}</div>`;
+        }
+    </script>
+</body>
+</html>

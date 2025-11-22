@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#4a90d9">
+    <title>Form Analytics</title>
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        :root {
+            --primary: #4a90d9;
+            --primary-dark: #357abd;
+            --bg: #f5f7fa;
+            --card-bg: #ffffff;
+            --text: #333333;
+            --text-light: #666666;
+            --border: #e0e0e0;
+            --safe-top: env(safe-area-inset-top);
+            --safe-bottom: env(safe-area-inset-bottom);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* App Shell */
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            padding-top: var(--safe-top);
+            padding-bottom: var(--safe-bottom);
+        }
+
+        /* Header */
+        .app-header {
+            background: var(--primary);
+            color: white;
+            padding: 15px 20px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .app-header h1 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        /* Main Content */
+        .app-content {
+            flex: 1;
+            padding: 15px;
+            padding-bottom: 80px;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .card-title {
+            font-weight: 600;
+            font-size: 1rem;
+            margin-bottom: 12px;
+            color: var(--text);
+        }
+
+        /* Query Input */
+        .query-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 15px;
+        }
+
+        .query-input-wrapper {
+            display: flex;
+            gap: 10px;
+        }
+
+        .query-input {
+            flex: 1;
+            padding: 14px 16px;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            font-size: 16px;
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        .query-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .query-btn {
+            padding: 14px 20px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .query-btn:active {
+            background: var(--primary-dark);
+        }
+
+        .query-btn:disabled {
+            opacity: 0.5;
+        }
+
+        /* Quick Actions */
+        .quick-actions {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding: 10px 0;
+            margin: -5px;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .quick-action {
+            flex-shrink: 0;
+            padding: 10px 16px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            font-size: 13px;
+            color: var(--text);
+            cursor: pointer;
+        }
+
+        .quick-action:active {
+            background: var(--border);
+        }
+
+        /* Results */
+        .results-card {
+            min-height: 200px;
+        }
+
+        .results-tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 15px;
+            overflow-x: auto;
+        }
+
+        .results-tab {
+            padding: 8px 16px;
+            background: var(--bg);
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-light);
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .results-tab.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .results-content {
+            display: none;
+        }
+
+        .results-content.active {
+            display: block;
+        }
+
+        /* Data Table */
+        .data-table-wrapper {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 10px 8px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+        }
+
+        .data-table th {
+            background: var(--bg);
+            font-weight: 600;
+            font-size: 11px;
+            text-transform: uppercase;
+            color: var(--text-light);
+            position: sticky;
+            top: 0;
+        }
+
+        /* Chart */
+        .chart-wrapper {
+            position: relative;
+            height: 250px;
+            margin-bottom: 15px;
+        }
+
+        .chart-types {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        .chart-type {
+            padding: 8px 16px;
+            border: 1px solid var(--border);
+            background: var(--card-bg);
+            border-radius: 8px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .chart-type.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        /* SQL Display */
+        .sql-code {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 12px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 12px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        /* Forms List */
+        .forms-scroll {
+            display: flex;
+            gap: 12px;
+            overflow-x: auto;
+            padding: 5px 0;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .form-card {
+            flex-shrink: 0;
+            width: 200px;
+            padding: 15px;
+            background: var(--bg);
+            border-radius: 12px;
+            cursor: pointer;
+        }
+
+        .form-card:active {
+            background: var(--border);
+        }
+
+        .form-card-title {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .form-card-stats {
+            font-size: 12px;
+            color: var(--text-light);
+        }
+
+        /* Bottom Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--card-bg);
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            padding-bottom: calc(10px + var(--safe-bottom));
+            border-top: 1px solid var(--border);
+            z-index: 100;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 8px 16px;
+            background: none;
+            border: none;
+            color: var(--text-light);
+            font-size: 10px;
+            cursor: pointer;
+        }
+
+        .nav-item.active {
+            color: var(--primary);
+        }
+
+        .nav-icon {
+            font-size: 20px;
+        }
+
+        /* Views */
+        .view {
+            display: none;
+        }
+
+        .view.active {
+            display: block;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .stat-item {
+            background: var(--bg);
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: var(--text-light);
+            margin-top: 4px;
+        }
+
+        /* History */
+        .history-item {
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+        }
+
+        .history-item:active {
+            background: var(--bg);
+        }
+
+        .history-query {
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+
+        .history-meta {
+            font-size: 11px;
+            color: var(--text-light);
+        }
+
+        /* Loading & Empty */
+        .loading, .empty {
+            text-align: center;
+            padding: 30px;
+            color: var(--text-light);
+        }
+
+        .spinner {
+            width: 30px;
+            height: 30px;
+            border: 3px solid var(--border);
+            border-top: 3px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            100% { transform: rotate(360deg); }
+        }
+
+        .empty-icon {
+            font-size: 36px;
+            margin-bottom: 10px;
+            opacity: 0.5;
+        }
+
+        /* Error */
+        .error {
+            background: #fff5f5;
+            color: #c53030;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 13px;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 90px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .toast.show {
+            opacity: 1;
+        }
+
+        /* Voice Input */
+        .voice-btn {
+            padding: 14px;
+            background: var(--bg);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 18px;
+        }
+
+        .voice-btn:active {
+            background: var(--border);
+        }
+
+        .voice-btn.recording {
+            border-color: #e53e3e;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <h1>Form Analytics</h1>
+        </header>
+
+        <main class="app-content">
+            <!-- Query View -->
+            <div class="view active" id="view-query">
+                <div class="query-card">
+                    <div class="query-input-wrapper">
+                        <input type="text" id="queryInput" class="query-input"
+                               placeholder="Ask about your data...">
+                        <button class="voice-btn" id="voiceBtn" onclick="toggleVoice()">🎤</button>
+                        <button class="query-btn" id="queryBtn" onclick="runQuery()">Go</button>
+                    </div>
+                </div>
+
+                <div class="quick-actions" id="quickActions">
+                    <!-- Quick actions loaded here -->
+                </div>
+
+                <div class="card results-card">
+                    <div class="results-tabs">
+                        <button class="results-tab active" data-tab="table">Table</button>
+                        <button class="results-tab" data-tab="chart">Chart</button>
+                        <button class="results-tab" data-tab="sql">SQL</button>
+                    </div>
+
+                    <div class="results-content active" id="results-table">
+                        <div class="empty">
+                            <div class="empty-icon">📊</div>
+                            <p>Ask a question to see results</p>
+                        </div>
+                    </div>
+
+                    <div class="results-content" id="results-chart">
+                        <div class="chart-wrapper">
+                            <canvas id="chart"></canvas>
+                        </div>
+                        <div class="chart-types">
+                            <button class="chart-type active" data-type="bar">Bar</button>
+                            <button class="chart-type" data-type="line">Line</button>
+                            <button class="chart-type" data-type="pie">Pie</button>
+                        </div>
+                    </div>
+
+                    <div class="results-content" id="results-sql">
+                        <pre class="sql-code" id="sqlCode">-- SQL will appear here</pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Forms View -->
+            <div class="view" id="view-forms">
+                <div class="card">
+                    <div class="card-title">Your Forms</div>
+                    <div id="formsList" class="forms-scroll">
+                        <div class="loading">
+                            <div class="spinner"></div>
+                            Loading...
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">Database Status</div>
+                    <div class="stats-grid" id="syncStats">
+                        <!-- Stats loaded here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- History View -->
+            <div class="view" id="view-history">
+                <div class="card">
+                    <div class="card-title">Recent Queries</div>
+                    <div id="historyList">
+                        <div class="loading">
+                            <div class="spinner"></div>
+                            Loading...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Bottom Navigation -->
+        <nav class="bottom-nav">
+            <button class="nav-item active" data-view="query">
+                <span class="nav-icon">🔍</span>
+                Query
+            </button>
+            <button class="nav-item" data-view="forms">
+                <span class="nav-icon">📋</span>
+                Forms
+            </button>
+            <button class="nav-item" data-view="history">
+                <span class="nav-icon">📜</span>
+                History
+            </button>
+        </nav>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // State
+        let chart = null;
+        let results = null;
+        let chartType = 'bar';
+        let recognition = null;
+
+        // Init
+        document.addEventListener('DOMContentLoaded', init);
+
+        function init() {
+            initNavigation();
+            initTabs();
+            initChartTypes();
+            initVoice();
+            loadQuickActions();
+            loadForms();
+            loadHistory();
+            loadSyncStatus();
+
+            // Register service worker
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/sw.js');
+            }
+        }
+
+        // Navigation
+        function initNavigation() {
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+                    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+                    item.classList.add('active');
+                    document.getElementById(`view-${item.dataset.view}`).classList.add('active');
+                });
+            });
+        }
+
+        // Tabs
+        function initTabs() {
+            document.querySelectorAll('.results-tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    document.querySelectorAll('.results-tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.results-content').forEach(c => c.classList.remove('active'));
+                    tab.classList.add('active');
+                    document.getElementById(`results-${tab.dataset.tab}`).classList.add('active');
+                });
+            });
+        }
+
+        // Chart types
+        function initChartTypes() {
+            document.querySelectorAll('.chart-type').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.chart-type').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    chartType = btn.dataset.type;
+                    if (results) renderChart();
+                });
+            });
+        }
+
+        // Voice input
+        function initVoice() {
+            if ('webkitSpeechRecognition' in window) {
+                recognition = new webkitSpeechRecognition();
+                recognition.continuous = false;
+                recognition.interimResults = false;
+
+                recognition.onresult = (e) => {
+                    const text = e.results[0][0].transcript;
+                    document.getElementById('queryInput').value = text;
+                    document.getElementById('voiceBtn').classList.remove('recording');
+                    runQuery();
+                };
+
+                recognition.onerror = () => {
+                    document.getElementById('voiceBtn').classList.remove('recording');
+                    showToast('Voice input failed');
+                };
+            }
+        }
+
+        function toggleVoice() {
+            if (!recognition) {
+                showToast('Voice not supported');
+                return;
+            }
+
+            const btn = document.getElementById('voiceBtn');
+            if (btn.classList.contains('recording')) {
+                recognition.stop();
+                btn.classList.remove('recording');
+            } else {
+                recognition.start();
+                btn.classList.add('recording');
+            }
+        }
+
+        // Run query
+        async function runQuery() {
+            const input = document.getElementById('queryInput');
+            const query = input.value.trim();
+            if (!query) return;
+
+            const btn = document.getElementById('queryBtn');
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/query', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query })
+                });
+
+                const data = await res.json();
+
+                if (data.success) {
+                    results = data;
+                    displayResults(data);
+                    loadHistory();
+                } else {
+                    showError(data.error);
+                }
+            } catch (e) {
+                showError('Query failed');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        // Display results
+        function displayResults(data) {
+            const r = data.results;
+
+            // SQL
+            document.getElementById('sqlCode').textContent = data.sql_query;
+
+            // Table
+            if (r.rows.length > 0) {
+                let html = '<div class="data-table-wrapper"><table class="data-table"><thead><tr>';
+                r.columns.forEach(c => html += `<th>${c}</th>`);
+                html += '</tr></thead><tbody>';
+                r.rows.forEach(row => {
+                    html += '<tr>';
+                    r.columns.forEach(c => html += `<td>${row[c] ?? ''}</td>`);
+                    html += '</tr>';
+                });
+                html += '</tbody></table></div>';
+                document.getElementById('results-table').innerHTML = html;
+            } else {
+                document.getElementById('results-table').innerHTML =
+                    '<div class="empty"><p>No results</p></div>';
+            }
+
+            // Chart
+            renderChart();
+        }
+
+        // Render chart
+        async function renderChart() {
+            if (!results) return;
+
+            const ctx = document.getElementById('chart').getContext('2d');
+            if (chart) chart.destroy();
+
+            try {
+                const res = await fetch('/api/chart', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        data: results.results,
+                        chart_type: chartType
+                    })
+                });
+
+                const config = await res.json();
+                chart = new Chart(ctx, config);
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        // Load quick actions
+        async function loadQuickActions() {
+            try {
+                const res = await fetch('/api/query/suggestions');
+                const data = await res.json();
+
+                document.getElementById('quickActions').innerHTML =
+                    data.suggestions.slice(0, 5).map(s =>
+                        `<button class="quick-action" onclick="useQuery('${s.replace(/'/g, "\\'")}')">${s}</button>`
+                    ).join('');
+            } catch (e) {}
+        }
+
+        function useQuery(q) {
+            document.getElementById('queryInput').value = q;
+            runQuery();
+        }
+
+        // Load forms
+        async function loadForms() {
+            try {
+                const res = await fetch('/api/forms');
+                const data = await res.json();
+
+                if (data.forms?.length > 0) {
+                    document.getElementById('formsList').innerHTML = data.forms.map(f => `
+                        <div class="form-card" onclick="queryForm('${f.session_id}')">
+                            <div class="form-card-title">${f.title}</div>
+                            <div class="form-card-stats">${f.response_count} responses</div>
+                        </div>
+                    `).join('');
+                } else {
+                    document.getElementById('formsList').innerHTML =
+                        '<div class="empty"><p>No forms</p></div>';
+                }
+            } catch (e) {
+                document.getElementById('formsList').innerHTML =
+                    '<div class="error">Failed to load</div>';
+            }
+        }
+
+        function queryForm(id) {
+            document.getElementById('queryInput').value = `Show responses for form "${id}"`;
+            document.querySelector('[data-view="query"]').click();
+            runQuery();
+        }
+
+        // Load history
+        async function loadHistory() {
+            try {
+                const res = await fetch('/api/query/history?limit=20');
+                const data = await res.json();
+
+                if (data.history?.length > 0) {
+                    document.getElementById('historyList').innerHTML = data.history.map(h => `
+                        <div class="history-item" onclick="useQuery('${h.natural_query.replace(/'/g, "\\'")}')">
+                            <div class="history-query">${h.natural_query}</div>
+                            <div class="history-meta">${h.result_count} results</div>
+                        </div>
+                    `).join('');
+                } else {
+                    document.getElementById('historyList').innerHTML =
+                        '<div class="empty"><p>No history</p></div>';
+                }
+            } catch (e) {
+                document.getElementById('historyList').innerHTML =
+                    '<div class="error">Failed to load</div>';
+            }
+        }
+
+        // Load sync status
+        async function loadSyncStatus() {
+            try {
+                const res = await fetch('/api/sync/status');
+                const data = await res.json();
+
+                document.getElementById('syncStats').innerHTML = `
+                    <div class="stat-item">
+                        <div class="stat-value">${data.dynamic_forms}</div>
+                        <div class="stat-label">Dynamic</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${data.static_forms}</div>
+                        <div class="stat-label">Static</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${data.pending}</div>
+                        <div class="stat-label">Pending</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${data.synced}</div>
+                        <div class="stat-label">Synced</div>
+                    </div>
+                `;
+            } catch (e) {}
+        }
+
+        // Show error
+        function showError(msg) {
+            document.getElementById('results-table').innerHTML =
+                `<div class="error">${msg}</div>`;
+        }
+
+        // Toast
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+    </script>
+</body>
+</html>
