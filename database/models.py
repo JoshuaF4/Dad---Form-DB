@@ -11,16 +11,14 @@ from sqlalchemy import (
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
+from sqlalchemy.pool import QueuePool
 from enum import Enum
+
+from .config import get_dynamic_db_url, get_static_db_url
 
 # Create separate bases for dynamic and static databases
 DynamicBase = declarative_base()
 StaticBase = declarative_base()
-
-# Database paths
-DB_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')
-DYNAMIC_DB_PATH = os.path.join(DB_DIR, 'dynamic_forms.db')
-STATIC_DB_PATH = os.path.join(DB_DIR, 'static_forms.db')
 
 # Engines and sessions
 dynamic_engine = None
@@ -305,19 +303,46 @@ class QueryHistory(StaticBase):
 # ============ DATABASE INITIALIZATION ============
 
 def init_databases():
-    """Initialize both dynamic and static databases"""
+    """
+    Initialize both dynamic and static databases.
+
+    Supports cloud databases (PostgreSQL, MySQL) and local SQLite.
+    Configure via environment variables - see database/config.py for details.
+    """
     global dynamic_engine, static_engine, DynamicSession, StaticSession
 
-    # Create data directory if it doesn't exist
-    os.makedirs(DB_DIR, exist_ok=True)
+    # Get database URLs from config (supports cloud and local)
+    dynamic_url = get_dynamic_db_url()
+    static_url = get_static_db_url()
+
+    # Engine options for connection pooling (important for cloud DBs)
+    engine_options = {
+        'echo': False,
+        'pool_pre_ping': True,  # Verify connections before use
+    }
+
+    # Add connection pooling for non-SQLite databases
+    if 'sqlite' not in dynamic_url:
+        engine_options.update({
+            'poolclass': QueuePool,
+            'pool_size': 5,
+            'max_overflow': 10,
+            'pool_recycle': 3600,  # Recycle connections after 1 hour
+        })
 
     # Initialize dynamic database
-    dynamic_engine = create_engine(f'sqlite:///{DYNAMIC_DB_PATH}', echo=False)
+    dynamic_engine = create_engine(dynamic_url, **engine_options)
     DynamicBase.metadata.create_all(dynamic_engine)
     DynamicSession = sessionmaker(bind=dynamic_engine)
 
     # Initialize static database
-    static_engine = create_engine(f'sqlite:///{STATIC_DB_PATH}', echo=False)
+    if 'sqlite' not in static_url:
+        engine_options.update({
+            'poolclass': QueuePool,
+            'pool_size': 5,
+            'max_overflow': 10,
+        })
+    static_engine = create_engine(static_url, **engine_options)
     StaticBase.metadata.create_all(static_engine)
     StaticSession = sessionmaker(bind=static_engine)
 
