@@ -282,7 +282,7 @@ class TestFormGenerator(unittest.TestCase):
             "E-mail"
         ]
         for text in test_texts:
-            field_type = self.parser._detect_field_type(text)
+            field_type = self.parser._infer_field_type(text)
             self.assertEqual(field_type, "email", f"Failed for: {text}")
 
     def test_field_type_detection_phone(self):
@@ -293,7 +293,7 @@ class TestFormGenerator(unittest.TestCase):
             "Mobile number"
         ]
         for text in test_texts:
-            field_type = self.parser._detect_field_type(text)
+            field_type = self.parser._infer_field_type(text)
             self.assertEqual(field_type, "tel", f"Failed for: {text}")
 
     def test_field_type_detection_date(self):
@@ -304,7 +304,7 @@ class TestFormGenerator(unittest.TestCase):
             "Start date"
         ]
         for text in test_texts:
-            field_type = self.parser._detect_field_type(text)
+            field_type = self.parser._infer_field_type(text)
             self.assertEqual(field_type, "date", f"Failed for: {text}")
 
     def test_required_field_detection(self):

@@ -215,6 +215,17 @@ class NLPQueryEngine:
             score = sum(1 for pattern in patterns if re.search(pattern, query))
             intent_scores[intent] = score
 
+        # Apply priority rules for ambiguous cases
+        # AGGREGATE takes priority over COUNT when aggregate keywords appear
+        aggregate_keywords = ['average', 'mean', 'sum', 'max', 'min', 'maximum', 'minimum']
+        if any(kw in query for kw in aggregate_keywords):
+            # Boost aggregate score and reduce count score if "count" appears after aggregate
+            if intent_scores.get(QueryIntent.AGGREGATE, 0) > 0:
+                intent_scores[QueryIntent.AGGREGATE] += 2
+                # Check if "count" is just part of phrase like "response count"
+                if re.search(r'\b(response|form|field)\s+count\b', query):
+                    intent_scores[QueryIntent.COUNT] = 0
+
         # Default to LIST if no clear intent
         max_score = max(intent_scores.values()) if intent_scores else 0
         if max_score == 0:
@@ -391,12 +402,22 @@ class NLPQueryEngine:
         """Parse aggregation functions from query"""
         aggregations = []
 
+        # Words that should resolve to COUNT(*) not COUNT(word)
+        table_words = {'forms', 'form', 'responses', 'response', 'submissions',
+                       'submission', 'entries', 'entry', 'records', 'record',
+                       'results', 'result', 'items', 'item', 'rows', 'row'}
+
         for pattern, func in self.aggregation_patterns.items():
             if re.search(pattern, query):
                 # Try to find what field to aggregate
                 match = re.search(f'{pattern}\\s+(?:of\\s+)?(?:the\\s+)?(\\w+)', query)
-                if match:
-                    field = match.group(1)
+                if match and match.group(1):
+                    field = match.group(1).lower()
+                    # Use * for COUNT when the word is a table reference
+                    if func == 'COUNT' and field in table_words:
+                        field = '*'
+                    elif func == 'COUNT' and field in ['all', 'total', 'everything']:
+                        field = '*'
                 else:
                     field = '*' if func == 'COUNT' else 'value'
 
