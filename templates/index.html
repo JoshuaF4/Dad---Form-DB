@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Form Generator</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f0f2f5;
+            min-height: 100vh;
+        }
+
+        .app-header {
+            background: #2c3e50;
+            color: #fff;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .app-header h1 {
+            font-size: 1.8rem;
+            margin-bottom: 5px;
+        }
+
+        .app-header p {
+            opacity: 0.8;
+            font-size: 0.9rem;
+        }
+
+        .main-container {
+            display: flex;
+            flex-direction: column;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        .input-section {
+            background: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .input-section h2 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .input-section textarea {
+            width: 100%;
+            min-height: 150px;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-family: inherit;
+            resize: vertical;
+        }
+
+        .input-section textarea:focus {
+            outline: none;
+            border-color: #4a90d9;
+        }
+
+        .input-section .hint {
+            font-size: 0.85rem;
+            color: #666;
+            margin-top: 10px;
+        }
+
+        .btn-generate {
+            margin-top: 15px;
+            padding: 12px 30px;
+            background: #4a90d9;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .btn-generate:hover {
+            background: #357abd;
+        }
+
+        .btn-generate:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .workspace {
+            display: none;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .workspace.active {
+            display: grid;
+        }
+
+        .editor-panel, .preview-panel {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .panel-header {
+            background: #f8f9fa;
+            padding: 15px 20px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-header h3 {
+            font-size: 1.1rem;
+            color: #333;
+        }
+
+        .panel-body {
+            padding: 20px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        /* Form Settings */
+        .form-settings {
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .form-settings input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+
+        .form-settings input:focus {
+            outline: none;
+            border-color: #4a90d9;
+        }
+
+        /* Field Editor */
+        .field-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .field-item {
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 15px;
+            background: #fafafa;
+            cursor: move;
+        }
+
+        .field-item:hover {
+            border-color: #4a90d9;
+        }
+
+        .field-item.editing {
+            background: #fff;
+            border-color: #4a90d9;
+        }
+
+        .field-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .field-item-title {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .field-item-type {
+            font-size: 0.8rem;
+            color: #666;
+            background: #e0e0e0;
+            padding: 2px 8px;
+            border-radius: 3px;
+        }
+
+        .field-item-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .field-item-actions button {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        .btn-edit-field {
+            background: #3498db;
+            color: #fff;
+        }
+
+        .btn-delete-field {
+            background: #e74c3c;
+            color: #fff;
+        }
+
+        /* Field Editor Form */
+        .field-editor-form {
+            display: none;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .field-editor-form.active {
+            display: block;
+        }
+
+        .field-editor-form .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .field-editor-form label {
+            display: block;
+            font-size: 0.85rem;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .field-editor-form input,
+        .field-editor-form select,
+        .field-editor-form textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+
+        .field-editor-form .checkbox-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .field-editor-form .checkbox-row input {
+            width: auto;
+        }
+
+        .options-editor {
+            margin-top: 10px;
+        }
+
+        .options-editor textarea {
+            min-height: 60px;
+            font-family: monospace;
+        }
+
+        .field-editor-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .btn-save-field {
+            background: #27ae60;
+            color: #fff;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .btn-cancel-edit {
+            background: #95a5a6;
+            color: #fff;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        /* Add Field Button */
+        .btn-add-field {
+            width: 100%;
+            padding: 12px;
+            background: #27ae60;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+
+        .btn-add-field:hover {
+            background: #229954;
+        }
+
+        /* Preview */
+        .preview-frame {
+            border: none;
+            width: 100%;
+            min-height: 500px;
+        }
+
+        /* Export Actions */
+        .export-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .export-actions button {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+
+        .btn-export-html {
+            background: #9b59b6;
+            color: #fff;
+        }
+
+        .btn-export-json {
+            background: #f39c12;
+            color: #fff;
+        }
+
+        .btn-save {
+            background: #27ae60;
+            color: #fff;
+        }
+
+        /* Loading State */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #ddd;
+            border-top-color: #4a90d9;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .workspace {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="app-header">
+        <h1>AI Form Generator</h1>
+        <p>Create forms from natural language descriptions</p>
+    </header>
+
+    <main class="main-container">
+        <!-- Input Section -->
+        <section class="input-section">
+            <h2>Describe Your Form</h2>
+            <textarea id="formInput" placeholder="Example:
+Contact Form
+
+1. Full Name *
+2. Email Address *
+3. Phone Number
+4. Subject: [General Inquiry, Support, Feedback, Other]
+5. Message *
+6. Preferred Contact Method (Email/Phone/Either)
+7. Subscribe to newsletter"></textarea>
+            <p class="hint">
+                Tips: Use * for required fields, [options] for dropdowns, (option1/option2) for radio buttons.
+                Start with a title, then list your fields.
+            </p>
+            <button class="btn-generate" id="generateBtn">Generate Form</button>
+        </section>
+
+        <!-- Workspace -->
+        <section class="workspace" id="workspace">
+            <!-- Editor Panel -->
+            <div class="editor-panel">
+                <div class="panel-header">
+                    <h3>Form Editor</h3>
+                </div>
+                <div class="panel-body">
+                    <!-- Form Settings -->
+                    <div class="form-settings">
+                        <input type="text" id="formTitle" placeholder="Form Title">
+                        <input type="text" id="formDescription" placeholder="Form Description">
+                    </div>
+
+                    <!-- Field List -->
+                    <div class="field-list" id="fieldList">
+                        <!-- Fields will be rendered here -->
+                    </div>
+
+                    <button class="btn-add-field" id="addFieldBtn">+ Add New Field</button>
+                </div>
+            </div>
+
+            <!-- Preview Panel -->
+            <div class="preview-panel">
+                <div class="panel-header">
+                    <h3>Live Preview</h3>
+                    <div class="export-actions">
+                        <button class="btn-export-html" id="exportHtmlBtn">Export HTML</button>
+                        <button class="btn-export-json" id="exportJsonBtn">Export JSON</button>
+                        <button class="btn-save" id="saveBtn">Save</button>
+                    </div>
+                </div>
+                <div class="panel-body">
+                    <iframe id="previewFrame" class="preview-frame"></iframe>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // Application State
+        let currentSessionId = null;
+        let currentConfig = null;
+        let fieldTypes = [];
+
+        // DOM Elements
+        const formInput = document.getElementById('formInput');
+        const generateBtn = document.getElementById('generateBtn');
+        const workspace = document.getElementById('workspace');
+        const fieldList = document.getElementById('fieldList');
+        const previewFrame = document.getElementById('previewFrame');
+        const formTitle = document.getElementById('formTitle');
+        const formDescription = document.getElementById('formDescription');
+        const addFieldBtn = document.getElementById('addFieldBtn');
+        const exportHtmlBtn = document.getElementById('exportHtmlBtn');
+        const exportJsonBtn = document.getElementById('exportJsonBtn');
+        const saveBtn = document.getElementById('saveBtn');
+
+        // Generate Form
+        generateBtn.addEventListener('click', async () => {
+            const text = formInput.value.trim();
+            if (!text) {
+                alert('Please enter a form description');
+                return;
+            }
+
+            generateBtn.disabled = true;
+            generateBtn.textContent = 'Generating...';
+
+            try {
+                const response = await fetch('/api/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    currentSessionId = data.session_id;
+                    currentConfig = data.config;
+                    fieldTypes = data.field_types;
+
+                    // Update UI
+                    formTitle.value = currentConfig.title;
+                    formDescription.value = currentConfig.description;
+                    renderFieldList();
+                    updatePreview(data.html);
+                    workspace.classList.add('active');
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                alert('Error generating form: ' + error.message);
+            } finally {
+                generateBtn.disabled = false;
+                generateBtn.textContent = 'Generate Form';
+            }
+        });
+
+        // Render Field List
+        function renderFieldList() {
+            fieldList.innerHTML = '';
+
+            currentConfig.fields.forEach((field, index) => {
+                const fieldEl = createFieldElement(field, index);
+                fieldList.appendChild(fieldEl);
+            });
+        }
+
+        // Create Field Element
+        function createFieldElement(field, index) {
+            const div = document.createElement('div');
+            div.className = 'field-item';
+            div.setAttribute('data-field-id', field.id);
+            div.draggable = true;
+
+            div.innerHTML = `
+                <div class="field-item-header">
+                    <div>
+                        <span class="field-item-title">${field.label}</span>
+                        ${field.required ? '<span style="color: #e74c3c;"> *</span>' : ''}
+                    </div>
+                    <span class="field-item-type">${field.field_type}</span>
+                </div>
+                <div class="field-item-actions">
+                    <button class="btn-edit-field" onclick="toggleFieldEditor('${field.id}')">Edit</button>
+                    <button class="btn-delete-field" onclick="deleteField('${field.id}')">Delete</button>
+                </div>
+                <div class="field-editor-form" id="editor-${field.id}">
+                    <div class="form-row">
+                        <div>
+                            <label>Label</label>
+                            <input type="text" id="edit-label-${field.id}" value="${field.label}">
+                        </div>
+                        <div>
+                            <label>Type</label>
+                            <select id="edit-type-${field.id}" onchange="toggleOptionsEditor('${field.id}')">
+                                ${fieldTypes.map(t =>
+                                    `<option value="${t.value}" ${t.value === field.field_type ? 'selected' : ''}>${t.label}</option>`
+                                ).join('')}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div>
+                            <label>Name</label>
+                            <input type="text" id="edit-name-${field.id}" value="${field.name}">
+                        </div>
+                        <div>
+                            <label>Placeholder</label>
+                            <input type="text" id="edit-placeholder-${field.id}" value="${field.placeholder}">
+                        </div>
+                    </div>
+                    <div>
+                        <label>Description</label>
+                        <input type="text" id="edit-description-${field.id}" value="${field.description}">
+                    </div>
+                    <div class="checkbox-row">
+                        <input type="checkbox" id="edit-required-${field.id}" ${field.required ? 'checked' : ''}>
+                        <label for="edit-required-${field.id}">Required</label>
+                    </div>
+                    <div class="options-editor" id="options-editor-${field.id}" style="${['select', 'radio', 'checkbox'].includes(field.field_type) ? '' : 'display: none'}">
+                        <label>Options (one per line)</label>
+                        <textarea id="edit-options-${field.id}">${(field.options || []).join('\n')}</textarea>
+                    </div>
+                    <div class="field-editor-actions">
+                        <button class="btn-save-field" onclick="saveFieldEdit('${field.id}')">Save</button>
+                        <button class="btn-cancel-edit" onclick="toggleFieldEditor('${field.id}')">Cancel</button>
+                    </div>
+                </div>
+            `;
+
+            // Drag and drop
+            div.addEventListener('dragstart', handleDragStart);
+            div.addEventListener('dragover', handleDragOver);
+            div.addEventListener('drop', handleDrop);
+            div.addEventListener('dragend', handleDragEnd);
+
+            return div;
+        }
+
+        // Toggle Field Editor
+        function toggleFieldEditor(fieldId) {
+            const editor = document.getElementById(`editor-${fieldId}`);
+            const fieldItem = editor.closest('.field-item');
+
+            if (editor.classList.contains('active')) {
+                editor.classList.remove('active');
+                fieldItem.classList.remove('editing');
+            } else {
+                // Close other editors
+                document.querySelectorAll('.field-editor-form.active').forEach(el => {
+                    el.classList.remove('active');
+                    el.closest('.field-item').classList.remove('editing');
+                });
+
+                editor.classList.add('active');
+                fieldItem.classList.add('editing');
+            }
+        }
+
+        // Toggle Options Editor visibility
+        function toggleOptionsEditor(fieldId) {
+            const typeSelect = document.getElementById(`edit-type-${fieldId}`);
+            const optionsEditor = document.getElementById(`options-editor-${fieldId}`);
+            const needsOptions = ['select', 'radio', 'checkbox'].includes(typeSelect.value);
+            optionsEditor.style.display = needsOptions ? '' : 'none';
+        }
+
+        // Save Field Edit
+        async function saveFieldEdit(fieldId) {
+            const field = currentConfig.fields.find(f => f.id === fieldId);
+            if (!field) return;
+
+            const updatedField = {
+                ...field,
+                label: document.getElementById(`edit-label-${fieldId}`).value,
+                field_type: document.getElementById(`edit-type-${fieldId}`).value,
+                name: document.getElementById(`edit-name-${fieldId}`).value,
+                placeholder: document.getElementById(`edit-placeholder-${fieldId}`).value,
+                description: document.getElementById(`edit-description-${fieldId}`).value,
+                required: document.getElementById(`edit-required-${fieldId}`).checked,
+                options: document.getElementById(`edit-options-${fieldId}`).value
+                    .split('\n')
+                    .map(o => o.trim())
+                    .filter(o => o)
+            };
+
+            try {
+                const response = await fetch(`/api/form/${currentSessionId}/field/${fieldId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ field: updatedField })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Update local config
+                    const index = currentConfig.fields.findIndex(f => f.id === fieldId);
+                    currentConfig.fields[index] = data.field;
+
+                    renderFieldList();
+                    updatePreview(data.html);
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                alert('Error saving field: ' + error.message);
+            }
+        }
+
+        // Delete Field
+        async function deleteField(fieldId) {
+            if (!confirm('Are you sure you want to delete this field?')) return;
+
+            try {
+                const response = await fetch(`/api/form/${currentSessionId}/field/${fieldId}`, {
+                    method: 'DELETE'
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    currentConfig.fields = currentConfig.fields.filter(f => f.id !== fieldId);
+                    renderFieldList();
+                    updatePreview(data.html);
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                alert('Error deleting field: ' + error.message);
+            }
+        }
+
+        // Add New Field
+        addFieldBtn.addEventListener('click', async () => {
+            const newField = {
+                label: 'New Field',
+                field_type: 'text',
+                name: 'new_field',
+                required: false,
+                placeholder: '',
+                description: '',
+                options: []
+            };
+
+            try {
+                const response = await fetch(`/api/form/${currentSessionId}/field`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ field: newField })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    currentConfig.fields.push(data.field);
+                    renderFieldList();
+                    updatePreview(data.html);
+
+                    // Open editor for new field
+                    setTimeout(() => toggleFieldEditor(data.field.id), 100);
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                alert('Error adding field: ' + error.message);
+            }
+        });
+
+        // Update Form Settings
+        formTitle.addEventListener('change', updateFormConfig);
+        formDescription.addEventListener('change', updateFormConfig);
+
+        async function updateFormConfig() {
+            currentConfig.title = formTitle.value;
+            currentConfig.description = formDescription.value;
+
+            try {
+                const response = await fetch(`/api/form/${currentSessionId}/update`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ config: currentConfig })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    updatePreview(data.html);
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                alert('Error updating form: ' + error.message);
+            }
+        }
+
+        // Update Preview
+        function updatePreview(html) {
+            const doc = previewFrame.contentDocument || previewFrame.contentWindow.document;
+            doc.open();
+            doc.write(html);
+            doc.close();
+        }
+
+        // Drag and Drop
+        let draggedElement = null;
+
+        function handleDragStart(e) {
+            draggedElement = this;
+            this.style.opacity = '0.4';
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            return false;
+        }
+
+        function handleDrop(e) {
+            e.stopPropagation();
+
+            if (draggedElement !== this) {
+                // Reorder fields
+                const draggedId = draggedElement.getAttribute('data-field-id');
+                const targetId = this.getAttribute('data-field-id');
+
+                const draggedIndex = currentConfig.fields.findIndex(f => f.id === draggedId);
+                const targetIndex = currentConfig.fields.findIndex(f => f.id === targetId);
+
+                const [removed] = currentConfig.fields.splice(draggedIndex, 1);
+                currentConfig.fields.splice(targetIndex, 0, removed);
+
+                // Update via API
+                reorderFields();
+            }
+
+            return false;
+        }
+
+        function handleDragEnd(e) {
+            this.style.opacity = '1';
+        }
+
+        async function reorderFields() {
+            const order = currentConfig.fields.map(f => f.id);
+
+            try {
+                const response = await fetch(`/api/form/${currentSessionId}/reorder`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ order })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    renderFieldList();
+                    updatePreview(data.html);
+                }
+            } catch (error) {
+                console.error('Error reordering fields:', error);
+            }
+        }
+
+        // Export Functions
+        exportHtmlBtn.addEventListener('click', () => {
+            window.location.href = `/api/form/${currentSessionId}/export/html`;
+        });
+
+        exportJsonBtn.addEventListener('click', () => {
+            window.location.href = `/api/form/${currentSessionId}/export/json`;
+        });
+
+        saveBtn.addEventListener('click', async () => {
+            const filename = prompt('Enter filename (without extension):', currentConfig.title.replace(/\s+/g, '_'));
+            if (!filename) return;
+
+            try {
+                const response = await fetch(`/api/form/${currentSessionId}/save`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filename })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    alert(`Form saved!\nHTML: ${data.html_path}\nJSON: ${data.json_path}`);
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                alert('Error saving form: ' + error.message);
+            }
+        });
+    </script>
+</body>
+</html>
